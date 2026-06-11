@@ -511,6 +511,70 @@ textarea:focus {
   font-weight: 900;
 }
 
+.grocery-list {
+  display: grid;
+  gap: 10px;
+}
+
+.grocery-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(190px, 0.8fr);
+  gap: 14px;
+  align-items: start;
+  padding: 14px;
+  background: #f8faf9;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.grocery-item.unmatched {
+  background: #fffaf0;
+  border-color: #ead8a7;
+}
+
+.grocery-item > div,
+.grocery-store {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.grocery-meta,
+.grocery-store span {
+  color: var(--green);
+  font-size: 0.72rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.grocery-item strong,
+.grocery-item small {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.grocery-item small {
+  color: var(--muted);
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.grocery-store strong {
+  color: var(--text);
+  font-size: 0.92rem;
+}
+
+.suggestion-actions {
+  justify-items: end;
+}
+
+.assignment-select {
+  min-width: 160px;
+  min-height: 38px;
+  padding: 8px 10px;
+  background: #ffffff;
+}
+
 .primary-btn,
 .secondary-btn,
 .ghost-btn,
@@ -856,6 +920,18 @@ textarea:focus {
 
   .suggestion-item {
     grid-template-columns: 1fr;
+  }
+
+  .grocery-item {
+    grid-template-columns: 1fr;
+  }
+
+  .suggestion-actions {
+    justify-items: start;
+  }
+
+  .assignment-select {
+    width: min(100%, 240px);
   }
 
   .suggestion-estimate {

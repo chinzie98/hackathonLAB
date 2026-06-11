@@ -1,4 +1,5 @@
 const STORAGE_KEY = "gatherly.events.v1";
+const GROCERY_SEED_PATH = "grocery_item_store_matching_seed.csv";
 
 const accentColors = [
   "#d95d39",
@@ -83,6 +84,9 @@ const elements = {
   suggestionTotal: document.querySelector("#suggestionTotal"),
   suggestionNote: document.querySelector("#suggestionNote"),
   suggestionList: document.querySelector("#suggestionList"),
+  groceryRecommendationCount: document.querySelector("#groceryRecommendationCount"),
+  groceryRecommendationStatus: document.querySelector("#groceryRecommendationStatus"),
+  groceryRecommendationList: document.querySelector("#groceryRecommendationList"),
   budgetRemainingBadge: document.querySelector("#budgetRemainingBadge"),
   budgetSummary: document.querySelector("#budgetSummary"),
   budgetTotal: document.querySelector("#budgetTotal"),
@@ -131,10 +135,13 @@ const settingInputs = Array.from(document.querySelectorAll("[data-setting]"));
 let events = loadEvents();
 let activeEventId = events[0].id;
 let statusTimer = 0;
+let grocerySeed = [];
+let grocerySeedError = "";
 
 renderAccentChoices();
 bindEvents();
 renderAll();
+loadGrocerySeed();
 
 function bindEvents() {
   fieldInputs.forEach((input) => {
@@ -159,6 +166,7 @@ function bindEvents() {
       title: "Untitled BBQ",
       budget: "",
       expenses: [],
+      assignments: {},
       guests: [],
       preferences: {
         food: [],
@@ -219,6 +227,68 @@ function saveEvents() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(events));
 }
 
+async function loadGrocerySeed() {
+  try {
+    const response = await fetch(GROCERY_SEED_PATH);
+    if (!response.ok) {
+      throw new Error(`CSV request failed with ${response.status}`);
+    }
+    grocerySeed = parseCsv(await response.text());
+    grocerySeedError = "";
+  } catch (error) {
+    grocerySeed = [];
+    grocerySeedError = "Could not load grocery_item_store_matching_seed.csv from the local app server.";
+    console.warn("Could not load grocery seed", error);
+  }
+
+  renderAll();
+}
+
+function parseCsv(text) {
+  const rows = [];
+  let row = [];
+  let value = "";
+  let inQuotes = false;
+
+  for (let index = 0; index < text.length; index += 1) {
+    const char = text[index];
+    const next = text[index + 1];
+
+    if (char === '"' && inQuotes && next === '"') {
+      value += '"';
+      index += 1;
+    } else if (char === '"') {
+      inQuotes = !inQuotes;
+    } else if (char === "," && !inQuotes) {
+      row.push(value);
+      value = "";
+    } else if ((char === "\n" || char === "\r") && !inQuotes) {
+      if (char === "\r" && next === "\n") {
+        index += 1;
+      }
+      row.push(value);
+      if (row.some((cell) => cell.trim())) {
+        rows.push(row);
+      }
+      row = [];
+      value = "";
+    } else {
+      value += char;
+    }
+  }
+
+  row.push(value);
+  if (row.some((cell) => cell.trim())) {
+    rows.push(row);
+  }
+
+  const [headers = [], ...dataRows] = rows;
+  return dataRows.map((dataRow) => headers.reduce((record, header, index) => {
+    record[header] = dataRow[index] || "";
+    return record;
+  }, {}));
+}
+
 function persistAndRender() {
   saveEvents();
   renderAll();
@@ -236,7 +306,8 @@ function hydrateEvent(event) {
     },
     guests: Array.isArray(event.guests) ? event.guests : [],
     preferences: hydratePreferences(event),
-    expenses: Array.isArray(event.expenses) ? event.expenses : []
+    expenses: Array.isArray(event.expenses) ? event.expenses : [],
+    assignments: hydrateAssignments(event.assignments)
   };
 }
 
@@ -260,6 +331,19 @@ function hydratePreferences(event) {
     food: dedupe(food.map(String).map((item) => item.trim()).filter(Boolean)),
     drinks: dedupe(drinks.map(String).map((item) => item.trim()).filter(Boolean))
   };
+}
+
+function hydrateAssignments(assignments) {
+  if (!assignments || typeof assignments !== "object") {
+    return {};
+  }
+
+  return Object.entries(assignments).reduce((cleaned, [key, value]) => {
+    if (typeof value === "string" && value.trim()) {
+      cleaned[key] = value.trim();
+    }
+    return cleaned;
+  }, {});
 }
 
 function createEvent(overrides = {}) {
@@ -288,6 +372,10 @@ function createEvent(overrides = {}) {
       food: ["Burgers", "Veggie skewers", "Chips"],
       drinks: ["Lemonade", "Sparkling water"]
     },
+    assignments: {
+      main: "Alex",
+      drink: "Jamie"
+    },
     expenses: [
       { id: makeId(), name: "Grill food", amount: 95 },
       { id: makeId(), name: "Drinks", amount: 42 },
@@ -306,6 +394,7 @@ function renderAll() {
   renderGuests(event);
   renderPreferences(event);
   renderSuggestions(event);
+  renderGroceryRecommendations(event);
   renderBudget(event);
   renderPreview(event);
 }
@@ -386,7 +475,8 @@ function renderGuests(event) {
     remove.setAttribute("aria-label", `Remove ${guest}`);
     remove.textContent = "×";
     remove.addEventListener("click", () => {
-      event.guests.splice(index, 1);
+      const [removedGuest] = event.guests.splice(index, 1);
+      removeAssignmentsForPerson(event, removedGuest);
       persistAndRender();
     });
 
@@ -436,11 +526,11 @@ function renderSuggestions(event) {
   elements.suggestionNote.textContent = `${event.type || "Event"} plan for ${headcount} ${headcount === 1 ? "person" : "people"}${budget ? ` around ${formatMoney(budget)}` : ""}.`;
 
   suggestions.forEach((suggestion) => {
-    elements.suggestionList.append(createSuggestionItem(suggestion));
+    elements.suggestionList.append(createSuggestionItem(event, suggestion));
   });
 }
 
-function createSuggestionItem(suggestion) {
+function createSuggestionItem(event, suggestion) {
   const item = document.createElement("div");
   item.className = "suggestion-item";
 
@@ -448,18 +538,272 @@ function createSuggestionItem(suggestion) {
   const category = document.createElement("span");
   const name = document.createElement("strong");
   const quantity = document.createElement("small");
+  const actions = document.createElement("div");
   const estimate = document.createElement("span");
+  const select = document.createElement("select");
 
   category.className = "suggestion-category";
   category.textContent = suggestion.category;
   name.textContent = suggestion.name;
   quantity.textContent = suggestion.quantity;
+  actions.className = "suggestion-actions";
   estimate.className = "suggestion-estimate";
   estimate.textContent = formatMoney(suggestion.estimate);
+  select.className = "assignment-select";
+  select.setAttribute("aria-label", `Assign ${suggestion.name}`);
+  renderAssignmentOptions(select, event, suggestion.id);
+  select.addEventListener("change", () => {
+    const activeEvent = getActiveEvent();
+    if (select.value) {
+      activeEvent.assignments[suggestion.id] = select.value;
+    } else {
+      delete activeEvent.assignments[suggestion.id];
+    }
+    persistAndRender();
+  });
 
   content.append(category, name, quantity);
-  item.append(content, estimate);
+  actions.append(estimate, select);
+  item.append(content, actions);
   return item;
+}
+
+function renderGroceryRecommendations(event) {
+  const recommendations = generateGroceryRecommendations(event);
+  elements.groceryRecommendationList.replaceChildren();
+
+  if (grocerySeedError) {
+    elements.groceryRecommendationCount.textContent = "0";
+    elements.groceryRecommendationStatus.textContent = grocerySeedError;
+    return;
+  }
+
+  if (!grocerySeed.length) {
+    elements.groceryRecommendationCount.textContent = "...";
+    elements.groceryRecommendationStatus.textContent = `Loading ${GROCERY_SEED_PATH}...`;
+    return;
+  }
+
+  elements.groceryRecommendationCount.textContent = String(recommendations.length);
+  if (!recommendations.length) {
+    elements.groceryRecommendationStatus.textContent = "Add food or drink preferences to get grocery recommendations.";
+    return;
+  }
+
+  const matchedCount = recommendations.filter((item) => item.record).length;
+  elements.groceryRecommendationStatus.textContent = `${matchedCount} of ${recommendations.length} recommendations matched the grocery seed CSV.`;
+
+  recommendations.forEach((recommendation) => {
+    elements.groceryRecommendationList.append(createGroceryRecommendationItem(recommendation));
+  });
+}
+
+function createGroceryRecommendationItem(recommendation) {
+  const item = document.createElement("div");
+  item.className = "grocery-item";
+  item.classList.toggle("unmatched", !recommendation.record);
+
+  const content = document.createElement("div");
+  const meta = document.createElement("span");
+  const title = document.createElement("strong");
+  const quantity = document.createElement("small");
+  const source = document.createElement("small");
+
+  meta.className = "grocery-meta";
+  meta.textContent = recommendation.record
+    ? `${formatCategory(recommendation.record.product_category)} · ${formatConfidence(recommendation.record.match_confidence)} match`
+    : "Needs CSV match";
+  title.textContent = recommendation.itemName;
+  quantity.textContent = `Suggested qty: ${recommendation.quantity}`;
+  source.textContent = recommendation.assignee
+    ? `For ${recommendation.source} · Assigned to ${recommendation.assignee}`
+    : `For ${recommendation.source}`;
+
+  content.append(meta, title, quantity, source);
+
+  const store = document.createElement("div");
+  store.className = "grocery-store";
+  const storeLabel = document.createElement("span");
+  const storeChains = document.createElement("strong");
+  const inventory = document.createElement("small");
+
+  storeLabel.textContent = recommendation.record ? "Where to check" : "Store data";
+  storeChains.textContent = recommendation.record
+    ? formatStoreChains(recommendation.record.example_us_store_chains)
+    : "No store match in seed CSV";
+  inventory.textContent = recommendation.record
+    ? `${recommendation.record.needs_live_inventory_check === "yes" ? "Check live inventory" : "Static match"} · ${recommendation.record.preferred_live_source || "Retailer app"}`
+    : "Add a matching row to the CSV for store recommendations.";
+
+  store.append(storeLabel, storeChains, inventory);
+  item.append(content, store);
+  return item;
+}
+
+function generateGroceryRecommendations(event) {
+  if (!grocerySeed.length) return [];
+
+  const headcount = getPlanningHeadcount(event);
+  const needs = getGroceryNeeds(event);
+  const recommendations = new Map();
+
+  needs.forEach((need) => {
+    getGroceryTermsForNeed(need.text).forEach((term) => {
+      const record = findGroceryRecord(term);
+      const key = record ? normalizeForSearch(record.normalized_item) : `unmatched:${normalizeForSearch(term)}`;
+      const existing = recommendations.get(key);
+
+      if (existing) {
+        existing.sources.add(need.source);
+        if (!existing.assignee && need.assignee) {
+          existing.assignee = need.assignee;
+        }
+        return;
+      }
+
+      recommendations.set(key, {
+        record,
+        itemName: record ? toTitleCase(record.normalized_item) : toTitleCase(term),
+        source: need.source,
+        sources: new Set([need.source]),
+        assignee: need.assignee,
+        quantity: estimateGroceryQuantity(record, term, need, headcount)
+      });
+    });
+  });
+
+  return Array.from(recommendations.values()).map((recommendation) => ({
+    ...recommendation,
+    source: Array.from(recommendation.sources).slice(0, 2).join(", ")
+  }));
+}
+
+function getGroceryNeeds(event) {
+  const suggestions = event.settings.potluck ? generatePartySuggestions(event) : [];
+  const needs = suggestions
+    .filter((suggestion) => suggestion.category === "Food" || suggestion.category === "Drinks")
+    .map((suggestion) => ({
+      text: suggestion.name,
+      source: suggestion.name,
+      quantity: suggestion.quantity,
+      assignee: getAssignedPerson(event, suggestion.id)
+    }));
+
+  event.preferences.food.forEach((preference) => {
+    needs.push({
+      text: preference,
+      source: "Food preference",
+      quantity: `${getPlanningHeadcount(event)} people`,
+      assignee: ""
+    });
+  });
+
+  event.preferences.drinks.forEach((preference) => {
+    needs.push({
+      text: preference,
+      source: "Drink preference",
+      quantity: `${getPlanningHeadcount(event)} people`,
+      assignee: ""
+    });
+  });
+
+  return needs;
+}
+
+function getGroceryTermsForNeed(text) {
+  const normalized = normalizeForSearch(text);
+  const terms = [];
+
+  groceryAliasRules().forEach((rule) => {
+    if (rule.pattern.test(normalized)) {
+      terms.push(...rule.terms);
+    }
+  });
+
+  grocerySeed.forEach((record) => {
+    const input = normalizeForSearch(record.input_grocery);
+    const item = normalizeForSearch(record.normalized_item);
+    if ((input && normalized.includes(input)) || (item && normalized.includes(item))) {
+      terms.push(record.normalized_item);
+    }
+  });
+
+  return dedupe(terms.length ? terms : [text]);
+}
+
+function groceryAliasRules() {
+  return [
+    { pattern: /burger|hamburger|grilled main/, terms: ["ground beef", "cheddar cheese", "romaine lettuce"] },
+    { pattern: /veggie|vegetable|skewer/, terms: ["romaine lettuce", "avocados", "cilantro"] },
+    { pattern: /chip|dip/, terms: ["salsa"] },
+    { pattern: /sparkling water|seltzer/, terms: ["sparkling water"] },
+    { pattern: /pizza/, terms: ["frozen pizza", "cheddar cheese"] },
+    { pattern: /taco|wrap|quesadilla/, terms: ["tortillas", "ground beef", "cheddar cheese", "salsa", "cilantro", "avocados"] },
+    { pattern: /sandwich|slider/, terms: ["sourdough bread", "cheddar cheese", "romaine lettuce"] },
+    { pattern: /salad|lettuce/, terms: ["romaine lettuce", "avocados"] },
+    { pattern: /fruit/, terms: ["bananas", "avocados"] },
+    { pattern: /chicken/, terms: ["chicken breast"] },
+    { pattern: /salmon|fish|seafood/, terms: ["salmon fillet"] },
+    { pattern: /tofu|plant based|vegetarian protein/, terms: ["tofu"] },
+    { pattern: /rice/, terms: ["white rice"] },
+    { pattern: /pasta/, terms: ["pasta", "olive oil", "tomato paste"] },
+    { pattern: /bean/, terms: ["canned black beans"] },
+    { pattern: /coffee/, terms: ["coffee beans"] },
+    { pattern: /milk/, terms: ["milk"] },
+    { pattern: /dessert|cake|cupcake|cookie|brownie/, terms: ["ice cream", "baking powder", "butter", "eggs", "milk"] },
+    { pattern: /salsa/, terms: ["salsa"] }
+  ];
+}
+
+function findGroceryRecord(term) {
+  const normalized = normalizeForSearch(term);
+  return grocerySeed.find((record) => normalizeForSearch(record.input_grocery) === normalized)
+    || grocerySeed.find((record) => normalizeForSearch(record.normalized_item) === normalized)
+    || grocerySeed.find((record) => {
+      const input = normalizeForSearch(record.input_grocery);
+      const item = normalizeForSearch(record.normalized_item);
+      return input.includes(normalized) || item.includes(normalized) || normalized.includes(input) || normalized.includes(item);
+    })
+    || null;
+}
+
+function estimateGroceryQuantity(record, term, need, headcount) {
+  const item = normalizeForSearch(record ? record.normalized_item : term);
+
+  if (item.includes("ground beef")) return `~${Math.max(1, Math.ceil(headcount / 4))} lb`;
+  if (item.includes("chicken") || item.includes("salmon")) return `~${Math.max(1, Math.ceil(headcount / 3))} lb`;
+  if (item.includes("cheddar")) return `${Math.max(1, Math.ceil(headcount / 10))} packs`;
+  if (item.includes("romaine")) return `${Math.max(1, Math.ceil(headcount / 8))} heads or packs`;
+  if (item.includes("avocado")) return `${Math.max(2, Math.ceil(headcount / 4))} avocados`;
+  if (item.includes("cilantro")) return `${Math.max(1, Math.ceil(headcount / 12))} bunches`;
+  if (item.includes("tortilla")) return `${Math.max(1, Math.ceil(headcount / 10))} packs`;
+  if (item.includes("salsa")) return `${Math.max(1, Math.ceil(headcount / 10))} jars`;
+  if (item.includes("sparkling water")) return `${Math.max(1, Math.ceil(headcount / 8))} packs`;
+  if (item.includes("milk")) return `${Math.max(1, Math.ceil(headcount / 12))} cartons`;
+  if (item.includes("egg")) return `${Math.max(1, Math.ceil(headcount / 12))} dozen`;
+  if (item.includes("bread")) return `${Math.max(1, Math.ceil(headcount / 10))} loaves`;
+  if (item.includes("frozen pizza")) return `${Math.max(1, Math.ceil(headcount / 3))} pizzas`;
+  if (item.includes("ice cream")) return `${Math.max(1, Math.ceil(headcount / 8))} tubs`;
+  if (item.includes("rice") || item.includes("pasta")) return `${Math.max(1, Math.ceil(headcount / 10))} bags or boxes`;
+  if (item.includes("beans")) return `${Math.max(1, Math.ceil(headcount / 4))} cans`;
+
+  return `for ${need.quantity}`;
+}
+
+function renderAssignmentOptions(select, event, suggestionId) {
+  const unassigned = document.createElement("option");
+  unassigned.value = "";
+  unassigned.textContent = "Unassigned";
+  select.append(unassigned);
+
+  getAssignablePeople(event).forEach((person) => {
+    const option = document.createElement("option");
+    option.value = person;
+    option.textContent = person;
+    select.append(option);
+  });
+
+  select.value = getAssignedPerson(event, suggestionId);
 }
 
 function generatePartySuggestions(event) {
@@ -484,17 +828,18 @@ function generatePartySuggestions(event) {
     : [0.34, 0.16, 0.12, 0.18, 0.10, 0.10];
 
   return [
-    makeSuggestion("Food", picks.main, `${Math.ceil(headcount * (generous ? 1.35 : 1.15))} servings`, budget, shares[0]),
-    makeSuggestion("Food", picks.side, `${getTrayCount(headcount)} trays`, budget, shares[1]),
-    makeSuggestion("Food", picks.extra, `${getTrayCount(Math.max(headcount - 4, 1))} trays`, budget, shares[2]),
-    makeSuggestion("Drinks", picks.drink, `${Math.ceil(headcount * (generous ? 2 : 1.5))} servings`, budget, shares[3]),
-    makeSuggestion("Drinks", picks.backupDrink, `${Math.max(1, Math.ceil(headcount / 10))} packs or pitchers`, budget, shares[4]),
-    makeSuggestion("Supplies", picks.supply, `${headcount} place settings`, budget, shares[5])
+    makeSuggestion("main", "Food", picks.main, `${Math.ceil(headcount * (generous ? 1.35 : 1.15))} servings`, budget, shares[0]),
+    makeSuggestion("side", "Food", picks.side, `${getTrayCount(headcount)} trays`, budget, shares[1]),
+    makeSuggestion("extra", "Food", picks.extra, `${getTrayCount(Math.max(headcount - 4, 1))} trays`, budget, shares[2]),
+    makeSuggestion("drink", "Drinks", picks.drink, `${Math.ceil(headcount * (generous ? 2 : 1.5))} servings`, budget, shares[3]),
+    makeSuggestion("backupDrink", "Drinks", picks.backupDrink, `${Math.max(1, Math.ceil(headcount / 10))} packs or pitchers`, budget, shares[4]),
+    makeSuggestion("supply", "Supplies", picks.supply, `${headcount} place settings`, budget, shares[5])
   ];
 }
 
-function makeSuggestion(category, name, quantity, budget, share) {
+function makeSuggestion(id, category, name, quantity, budget, share) {
   return {
+    id,
     category,
     name,
     quantity,
@@ -585,11 +930,12 @@ function renderPreview(event) {
   preview.suggestions.replaceChildren();
   if (suggestions.length) {
     suggestions.forEach((suggestion) => {
+      const assignee = getAssignedPerson(event, suggestion.id);
       const li = document.createElement("li");
       const name = document.createElement("span");
       const qty = document.createElement("strong");
       name.textContent = suggestion.name;
-      qty.textContent = suggestion.quantity;
+      qty.textContent = assignee ? `${assignee} · ${suggestion.quantity}` : suggestion.quantity;
       li.append(name, qty);
       preview.suggestions.append(li);
     });
@@ -712,7 +1058,11 @@ function buildInviteText(event) {
   const suggestions = event.settings.potluck ? generatePartySuggestions(event) : [];
   const foodPrefs = event.preferences.food.length ? `Food preferences: ${event.preferences.food.join(", ")}` : "";
   const drinkPrefs = event.preferences.drinks.length ? `Drink preferences: ${event.preferences.drinks.join(", ")}` : "";
-  const suggestionLines = suggestions.map((item) => `- ${item.name}: ${item.quantity} (${formatMoney(item.estimate)})`);
+  const suggestionLines = suggestions.map((item) => {
+    const assignee = getAssignedPerson(event, item.id);
+    const owner = assignee ? ` - ${assignee}` : "";
+    return `- ${item.name}: ${item.quantity}${owner} (${formatMoney(item.estimate)})`;
+  });
   const lines = [
     `${event.title || "Untitled event"}`,
     `${formatDate(event.date)} · ${formatTimeRange(event.startTime, event.endTime)}`,
@@ -841,6 +1191,26 @@ function getBudgetProgress(total, spent) {
   return Math.min(Math.round((spent / total) * 100), 100);
 }
 
+function getAssignablePeople(event) {
+  return dedupe([event.host, ...event.guests]
+    .map((person) => String(person || "").trim())
+    .filter(Boolean));
+}
+
+function getAssignedPerson(event, suggestionId) {
+  const assigned = String((event.assignments && event.assignments[suggestionId]) || "").trim();
+  if (!assigned) return "";
+  return getAssignablePeople(event).includes(assigned) ? assigned : "";
+}
+
+function removeAssignmentsForPerson(event, person) {
+  Object.entries(event.assignments).forEach(([suggestionId, assigned]) => {
+    if (assigned === person) {
+      delete event.assignments[suggestionId];
+    }
+  });
+}
+
 function isDrinkPreference(value) {
   return /water|drink|lemonade|tea|coffee|soda|juice|beer|wine|seltzer|punch|cocktail|mocktail/i.test(value);
 }
@@ -853,6 +1223,39 @@ function dedupe(values) {
     seen.add(key);
     return true;
   });
+}
+
+function normalizeForSearch(value) {
+  return String(value || "")
+    .toLowerCase()
+    .replace(/&/g, " and ")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function formatCategory(value) {
+  return String(value || "grocery")
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function formatConfidence(value) {
+  const confidence = Number.parseFloat(value);
+  if (!Number.isFinite(confidence)) return "Seed";
+  return `${Math.round(confidence * 100)}%`;
+}
+
+function formatStoreChains(value) {
+  const stores = String(value || "")
+    .split(";")
+    .map((store) => store.trim())
+    .filter(Boolean);
+  return stores.slice(0, 4).join(" · ") || "Retailer app";
+}
+
+function toTitleCase(value) {
+  return String(value || "")
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
 function formatMoney(value) {
