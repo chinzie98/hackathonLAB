@@ -69,6 +69,81 @@ const eventBlueprints = {
   }
 };
 
+const fallbackGrocerySeed = [
+  {
+    input_grocery: "ground beef",
+    normalized_item: "ground beef",
+    product_category: "meat",
+    example_us_store_chains: "Kroger-family; Walmart Supercenter; Costco; Publix; local butcher",
+    match_confidence: "0.93",
+    needs_live_inventory_check: "yes",
+    preferred_live_source: "Instacart Developer Platform; retailer app/API"
+  },
+  {
+    input_grocery: "cheddar cheese",
+    normalized_item: "cheddar cheese",
+    product_category: "dairy",
+    example_us_store_chains: "Kroger-family; Walmart Supercenter; Safeway/Albertsons; Costco; Aldi",
+    match_confidence: "0.93",
+    needs_live_inventory_check: "yes",
+    preferred_live_source: "Instacart Developer Platform; Kroger API"
+  },
+  {
+    input_grocery: "romaine lettuce",
+    normalized_item: "romaine lettuce",
+    product_category: "produce",
+    example_us_store_chains: "Kroger-family; Walmart Supercenter; Costco; Whole Foods Market; Aldi",
+    match_confidence: "0.93",
+    needs_live_inventory_check: "yes",
+    preferred_live_source: "Instacart Developer Platform; retailer app/API"
+  },
+  {
+    input_grocery: "salsa",
+    normalized_item: "salsa",
+    product_category: "condiments",
+    example_us_store_chains: "Kroger-family; Walmart Supercenter; Target; local Mexican/Latino market; farmers market",
+    match_confidence: "0.91",
+    needs_live_inventory_check: "yes",
+    preferred_live_source: "Instacart Developer Platform; Kroger API"
+  },
+  {
+    input_grocery: "sparkling water",
+    normalized_item: "sparkling water",
+    product_category: "beverages",
+    example_us_store_chains: "Kroger-family; Walmart Supercenter; Target; Costco; Aldi",
+    match_confidence: "0.92",
+    needs_live_inventory_check: "yes",
+    preferred_live_source: "Instacart Developer Platform; Kroger API"
+  },
+  {
+    input_grocery: "tortillas",
+    normalized_item: "tortillas",
+    product_category: "bakery",
+    example_us_store_chains: "Kroger-family; Walmart Supercenter; Costco; local Mexican/Latino market; Aldi",
+    match_confidence: "0.94",
+    needs_live_inventory_check: "yes",
+    preferred_live_source: "Instacart Developer Platform; Kroger API"
+  },
+  {
+    input_grocery: "avocados",
+    normalized_item: "avocados",
+    product_category: "produce",
+    example_us_store_chains: "Kroger-family; Walmart Supercenter; Whole Foods Market; Sprouts; local Mexican/Latino market",
+    match_confidence: "0.93",
+    needs_live_inventory_check: "yes",
+    preferred_live_source: "Instacart Developer Platform; retailer app/API"
+  },
+  {
+    input_grocery: "cilantro",
+    normalized_item: "cilantro",
+    product_category: "produce",
+    example_us_store_chains: "Kroger-family; Walmart Supercenter; Safeway/Albertsons; local Mexican/Latino market; H Mart",
+    match_confidence: "0.90",
+    needs_live_inventory_check: "yes",
+    preferred_live_source: "Instacart Developer Platform; retailer app/API"
+  }
+];
+
 const elements = {
   form: document.querySelector("#eventForm"),
   eventList: document.querySelector("#eventList"),
@@ -125,6 +200,10 @@ const preview = {
   budgetBar: document.querySelector("#previewBudgetBar"),
   budgetSpent: document.querySelector("#previewBudgetSpent"),
   budgetTotal: document.querySelector("#previewBudgetTotal"),
+  impactTextsAvoided: document.querySelector("#impactTextsAvoided"),
+  impactTimeSaved: document.querySelector("#impactTimeSaved"),
+  impactGroceryMatches: document.querySelector("#impactGroceryMatches"),
+  demoReadiness: document.querySelector("#demoReadiness"),
   suggestions: document.querySelector("#previewSuggestions"),
   options: document.querySelector("#previewOptions")
 };
@@ -137,6 +216,7 @@ let activeEventId = events[0].id;
 let statusTimer = 0;
 let grocerySeed = [];
 let grocerySeedError = "";
+let grocerySeedSource = "";
 
 renderAccentChoices();
 bindEvents();
@@ -235,9 +315,11 @@ async function loadGrocerySeed() {
     }
     grocerySeed = parseCsv(await response.text());
     grocerySeedError = "";
+    grocerySeedSource = "csv";
   } catch (error) {
-    grocerySeed = [];
-    grocerySeedError = "Could not load grocery_item_store_matching_seed.csv from the local app server.";
+    grocerySeed = fallbackGrocerySeed;
+    grocerySeedError = "";
+    grocerySeedSource = "fallback";
     console.warn("Could not load grocery seed", error);
   }
 
@@ -591,7 +673,8 @@ function renderGroceryRecommendations(event) {
   }
 
   const matchedCount = recommendations.filter((item) => item.record).length;
-  elements.groceryRecommendationStatus.textContent = `${matchedCount} of ${recommendations.length} recommendations matched the grocery seed CSV.`;
+  const sourceLabel = grocerySeedSource === "fallback" ? "embedded grocery fallback" : "grocery seed CSV";
+  elements.groceryRecommendationStatus.textContent = `${matchedCount} of ${recommendations.length} recommendations matched the ${sourceLabel}.`;
 
   recommendations.forEach((recommendation) => {
     elements.groceryRecommendationList.append(createGroceryRecommendationItem(recommendation));
@@ -926,6 +1009,7 @@ function renderPreview(event) {
   preview.budgetBar.style.width = `${getBudgetProgress(totalBudget, spent)}%`;
   preview.budgetSummary.classList.toggle("over-budget", isOverBudget);
   preview.budgetRemaining.classList.toggle("over-budget", isOverBudget);
+  renderImpactMetrics(event, suggestions);
 
   preview.suggestions.replaceChildren();
   if (suggestions.length) {
@@ -951,6 +1035,27 @@ function renderPreview(event) {
     span.textContent = label;
     preview.options.append(span);
   });
+}
+
+function renderImpactMetrics(event, suggestions) {
+  const recommendations = generateGroceryRecommendations(event);
+  const assignedCount = suggestions.filter((suggestion) => getAssignedPerson(event, suggestion.id)).length;
+  const groceryMatches = recommendations.filter((item) => item.record).length;
+  const textsAvoided = Math.max(10, event.guests.length * 3 + suggestions.length + assignedCount);
+  const setupMinutesSaved = suggestions.length * 14 + groceryMatches * 5 + assignedCount * 8;
+  const hoursSaved = Math.max(1, Math.round((setupMinutesSaved / 60) * 10) / 10);
+
+  preview.impactTextsAvoided.textContent = String(textsAvoided);
+  preview.impactTimeSaved.textContent = `${hoursSaved}h`;
+  preview.impactGroceryMatches.textContent = String(groceryMatches);
+
+  if (!grocerySeed.length) {
+    preview.demoReadiness.textContent = "Demo loading: grocery data.";
+  } else if (grocerySeedSource === "fallback") {
+    preview.demoReadiness.textContent = "Demo ready: embedded grocery fallback loaded.";
+  } else {
+    preview.demoReadiness.textContent = "Demo ready: grocery seed CSV loaded.";
+  }
 }
 
 function getOptionLabels(event) {

@@ -24,7 +24,7 @@
       </nav>
     </header>
 
-    <main class="app-shell">
+    <main class="app-shell" data-testid="gatherly-app">
       <aside class="event-rail" aria-labelledby="eventsHeading">
         <div class="rail-header">
           <div>
@@ -36,7 +36,7 @@
         <div class="event-list" id="eventList"></div>
       </aside>
 
-      <section class="editor-panel" aria-labelledby="builderHeading">
+      <section class="editor-panel" aria-labelledby="builderHeading" data-testid="event-builder">
         <div class="section-heading">
           <div>
             <p class="eyebrow">Planner</p>
@@ -155,7 +155,7 @@
             <div class="chip-list" id="guestList"></div>
           </section>
 
-          <section class="form-section" aria-labelledby="preferencesHeading">
+          <section class="form-section" aria-labelledby="preferencesHeading" data-testid="food-drink-preferences">
             <div class="inline-heading">
               <h3 id="preferencesHeading">Food & Drink Preferences</h3>
               <span id="preferenceTotal">0</span>
@@ -217,7 +217,7 @@
             <div class="expense-list" id="expenseList"></div>
           </section>
 
-          <section class="form-section" aria-labelledby="suggestionsHeading">
+          <section class="form-section" aria-labelledby="suggestionsHeading" data-testid="party-suggestions">
             <div class="inline-heading">
               <h3 id="suggestionsHeading">What to Bring</h3>
               <span id="suggestionTotal">0</span>
@@ -226,13 +226,13 @@
             <div class="suggestion-list" id="suggestionList"></div>
           </section>
 
-          <section class="form-section" aria-labelledby="groceryHeading">
+          <section class="form-section" aria-labelledby="groceryHeading" data-testid="grocery-recommendations">
             <div class="inline-heading">
               <h3 id="groceryHeading">Grocery Recommendations</h3>
               <span id="groceryRecommendationCount">0</span>
             </div>
             <p class="suggestion-note" id="groceryRecommendationStatus"></p>
-            <div class="grocery-list" id="groceryRecommendationList"></div>
+            <div class="grocery-list" id="groceryRecommendationList" data-testid="grocery-recommendation-list"></div>
           </section>
         </form>
       </section>
@@ -293,6 +293,25 @@
                 <small>Spots left</small>
               </div>
             </div>
+
+            <section class="preview-section impact-panel" data-testid="organizer-impact">
+              <h3>Organizer Impact</h3>
+              <div class="impact-grid">
+                <div>
+                  <span id="impactTextsAvoided">0</span>
+                  <small>Texts avoided</small>
+                </div>
+                <div>
+                  <span id="impactTimeSaved">0h</span>
+                  <small>Setup saved</small>
+                </div>
+                <div>
+                  <span id="impactGroceryMatches">0</span>
+                  <small>Grocery matches</small>
+                </div>
+              </div>
+              <p id="demoReadiness">Demo initializing...</p>
+            </section>
 
             <section class="preview-section budget-preview" id="previewBudgetSummary">
               <div class="inline-heading">

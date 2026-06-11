@@ -757,6 +757,46 @@ textarea:focus {
   border-radius: 8px;
 }
 
+.impact-panel {
+  padding: 14px;
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.impact-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.impact-grid div {
+  display: grid;
+  gap: 3px;
+  min-height: 66px;
+  place-items: center;
+  background: #f4f7f7;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.impact-grid span {
+  color: var(--green);
+  font-size: 1.25rem;
+  font-weight: 900;
+}
+
+.impact-grid small,
+#demoReadiness {
+  color: var(--muted);
+  font-weight: 800;
+}
+
+#demoReadiness {
+  margin: 0;
+  line-height: 1.35;
+}
+
 .budget-meter {
   overflow: hidden;
   height: 10px;
@@ -914,7 +954,8 @@ textarea:focus {
   }
 
   .budget-summary,
-  .preview-stats {
+  .preview-stats,
+  .impact-grid {
     grid-template-columns: 1fr;
   }
 
