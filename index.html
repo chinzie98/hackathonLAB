@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Gatherly Event Builder</title>
+    <link rel="preload" href="assets/bbq-cover.png" as="image">
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <header class="app-header">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true">G</span>
+        <div>
+          <p class="eyebrow">Gatherly</p>
+          <h1>Event Builder</h1>
+        </div>
+      </div>
+
+      <nav class="top-actions" aria-label="Primary actions">
+        <button class="ghost-btn" id="newEventBtn" type="button">New</button>
+        <button class="secondary-btn" id="copyInviteBtn" type="button">Copy invite</button>
+        <button class="primary-btn" id="saveEventBtn" type="button">Save event</button>
+      </nav>
+    </header>
+
+    <main class="app-shell">
+      <aside class="event-rail" aria-labelledby="eventsHeading">
+        <div class="rail-header">
+          <div>
+            <p class="eyebrow">Saved</p>
+            <h2 id="eventsHeading">Events</h2>
+          </div>
+          <span class="event-count" id="eventCount">0</span>
+        </div>
+        <div class="event-list" id="eventList"></div>
+      </aside>
+
+      <section class="editor-panel" aria-labelledby="builderHeading">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Planner</p>
+            <h2 id="builderHeading">Create an event</h2>
+          </div>
+          <button class="danger-btn" id="deleteEventBtn" type="button">Delete</button>
+        </div>
+
+        <form class="event-form" id="eventForm">
+          <section class="form-section" aria-labelledby="detailsHeading">
+            <h3 id="detailsHeading">Details</h3>
+            <div class="field-grid two-col">
+              <label>
+                <span>Event name</span>
+                <input data-field="title" id="eventTitle" name="title" type="text" required>
+              </label>
+              <label>
+                <span>Event type</span>
+                <select data-field="type" name="type">
+                  <option>BBQ</option>
+                  <option>Birthday</option>
+                  <option>Picnic</option>
+                  <option>Game night</option>
+                  <option>Potluck</option>
+                  <option>Fundraiser</option>
+                </select>
+              </label>
+              <label>
+                <span>Host</span>
+                <input data-field="host" name="host" type="text">
+              </label>
+              <label>
+                <span>Capacity</span>
+                <input data-field="capacity" name="capacity" type="number" min="1" max="500">
+              </label>
+            </div>
+          </section>
+
+          <section class="form-section" aria-labelledby="scheduleHeading">
+            <h3 id="scheduleHeading">When and Where</h3>
+            <div class="field-grid two-col">
+              <label>
+                <span>Date</span>
+                <input data-field="date" name="date" type="date" required>
+              </label>
+              <label>
+                <span>Location</span>
+                <input data-field="location" name="location" type="text">
+              </label>
+              <label>
+                <span>Starts</span>
+                <input data-field="startTime" name="startTime" type="time">
+              </label>
+              <label>
+                <span>Ends</span>
+                <input data-field="endTime" name="endTime" type="time">
+              </label>
+            </div>
+          </section>
+
+          <section class="form-section" aria-labelledby="messageHeading">
+            <h3 id="messageHeading">Invite Message</h3>
+            <label>
+              <span>Vibe</span>
+              <select data-field="vibe" name="vibe">
+                <option>Casual drop-in</option>
+                <option>Hosted dinner</option>
+                <option>Kid friendly</option>
+                <option>Neighborhood hang</option>
+                <option>Bring a dish</option>
+              </select>
+            </label>
+            <label>
+              <span>Description</span>
+              <textarea data-field="description" name="description" rows="5"></textarea>
+            </label>
+          </section>
+
+          <section class="form-section" aria-labelledby="styleHeading">
+            <h3 id="styleHeading">Style</h3>
+            <div class="accent-row" id="accentChoices" aria-label="Accent color"></div>
+          </section>
+
+          <section class="form-section" aria-labelledby="settingsHeading">
+            <h3 id="settingsHeading">Options</h3>
+            <div class="toggle-grid">
+              <label class="toggle">
+                <input data-setting="rsvp" type="checkbox">
+                <span>RSVPs</span>
+              </label>
+              <label class="toggle">
+                <input data-setting="plusOnes" type="checkbox">
+                <span>Plus ones</span>
+              </label>
+              <label class="toggle">
+                <input data-setting="kids" type="checkbox">
+                <span>Kids welcome</span>
+              </label>
+              <label class="toggle">
+                <input data-setting="potluck" type="checkbox">
+                <span>Party list</span>
+              </label>
+            </div>
+          </section>
+
+          <section class="form-section" aria-labelledby="guestsHeading">
+            <div class="inline-heading">
+              <h3 id="guestsHeading">Guests</h3>
+              <span id="guestTotal">0</span>
+            </div>
+            <div class="inline-controls">
+              <label class="sr-only" for="guestInput">Guest name</label>
+              <input id="guestInput" type="text" placeholder="Guest name">
+              <button class="secondary-btn" id="addGuestBtn" type="button">Add</button>
+            </div>
+            <div class="chip-list" id="guestList"></div>
+          </section>
+
+          <section class="form-section" aria-labelledby="preferencesHeading">
+            <div class="inline-heading">
+              <h3 id="preferencesHeading">Food & Drink Preferences</h3>
+              <span id="preferenceTotal">0</span>
+            </div>
+            <div class="preference-grid">
+              <div class="preference-group">
+                <div class="preference-title">Food</div>
+                <div class="inline-controls preference-controls">
+                  <label class="sr-only" for="foodPreferenceInput">Food preference</label>
+                  <input id="foodPreferenceInput" type="text" placeholder="Burgers, tacos, veggie skewers">
+                  <button class="secondary-btn" id="addFoodPreferenceBtn" type="button">Add</button>
+                </div>
+                <div class="chip-list" id="foodPreferenceList"></div>
+              </div>
+              <div class="preference-group">
+                <div class="preference-title">Drinks</div>
+                <div class="inline-controls preference-controls">
+                  <label class="sr-only" for="drinkPreferenceInput">Drink preference</label>
+                  <input id="drinkPreferenceInput" type="text" placeholder="Lemonade, sparkling water">
+                  <button class="secondary-btn" id="addDrinkPreferenceBtn" type="button">Add</button>
+                </div>
+                <div class="chip-list" id="drinkPreferenceList"></div>
+              </div>
+            </div>
+          </section>
+
+          <section class="form-section" aria-labelledby="budgetHeading">
+            <div class="inline-heading">
+              <h3 id="budgetHeading">Budget</h3>
+              <span id="budgetRemainingBadge">$0</span>
+            </div>
+            <div class="field-grid">
+              <label>
+                <span>Total budget</span>
+                <input data-field="budget" name="budget" type="number" min="0" step="0.01" placeholder="300">
+              </label>
+            </div>
+            <div class="budget-summary" id="budgetSummary">
+              <div>
+                <span>Budget</span>
+                <strong id="budgetTotal">$0</strong>
+              </div>
+              <div>
+                <span>Spent</span>
+                <strong id="budgetSpent">$0</strong>
+              </div>
+              <div>
+                <span>Left</span>
+                <strong id="budgetLeft">$0</strong>
+              </div>
+            </div>
+            <div class="inline-controls budget-controls">
+              <label class="sr-only" for="expenseNameInput">Expense</label>
+              <input id="expenseNameInput" type="text" placeholder="Expense">
+              <label class="sr-only" for="expenseAmountInput">Amount</label>
+              <input id="expenseAmountInput" type="number" min="0" step="0.01" placeholder="$">
+              <button class="secondary-btn" id="addExpenseBtn" type="button">Add</button>
+            </div>
+            <div class="expense-list" id="expenseList"></div>
+          </section>
+
+          <section class="form-section" aria-labelledby="suggestionsHeading">
+            <div class="inline-heading">
+              <h3 id="suggestionsHeading">What to Bring</h3>
+              <span id="suggestionTotal">0</span>
+            </div>
+            <p class="suggestion-note" id="suggestionNote"></p>
+            <div class="suggestion-list" id="suggestionList"></div>
+          </section>
+        </form>
+      </section>
+
+      <aside class="preview-panel" aria-labelledby="previewHeading">
+        <div class="section-heading compact">
+          <div>
+            <p class="eyebrow">Invite</p>
+            <h2 id="previewHeading">Preview</h2>
+          </div>
+          <button class="ghost-btn" id="downloadCalendarBtn" type="button">Calendar</button>
+        </div>
+
+        <article class="invite" id="invitePreview">
+          <div class="invite-cover">
+            <img src="assets/bbq-cover.png" alt="Backyard BBQ table with grilled food and summer drinks">
+            <div class="cover-shade"></div>
+            <div class="cover-content">
+              <span id="previewType">BBQ</span>
+              <h2 id="previewTitle">Backyard BBQ</h2>
+              <p id="previewDate">Saturday, June 20</p>
+            </div>
+          </div>
+
+          <div class="invite-body">
+            <div class="detail-grid">
+              <div>
+                <span>Date</span>
+                <strong id="previewFullDate">Saturday, June 20</strong>
+              </div>
+              <div>
+                <span>Time</span>
+                <strong id="previewTime">4:00 PM - 8:00 PM</strong>
+              </div>
+              <div>
+                <span>Place</span>
+                <strong id="previewLocation">Backyard or park</strong>
+              </div>
+              <div>
+                <span>Host</span>
+                <strong id="previewHost">Your host</strong>
+              </div>
+            </div>
+
+            <p class="preview-description" id="previewDescription"></p>
+
+            <div class="preview-stats">
+              <div>
+                <span id="previewGuestCount">0</span>
+                <small>Guests</small>
+              </div>
+              <div>
+                <span id="previewSuggestionCount">0</span>
+                <small>To bring</small>
+              </div>
+              <div>
+                <span id="previewSpotsLeft">0</span>
+                <small>Spots left</small>
+              </div>
+            </div>
+
+            <section class="preview-section budget-preview" id="previewBudgetSummary">
+              <div class="inline-heading">
+                <h3>Budget</h3>
+                <span id="previewBudgetRemaining">$0 left</span>
+              </div>
+              <div class="budget-meter" aria-hidden="true">
+                <span id="previewBudgetBar"></span>
+              </div>
+              <div class="budget-preview-values">
+                <span id="previewBudgetSpent">$0 spent</span>
+                <strong id="previewBudgetTotal">$0 budget</strong>
+              </div>
+            </section>
+
+            <section class="preview-section">
+              <h3>What to Bring</h3>
+              <ul id="previewSuggestions"></ul>
+            </section>
+
+            <div class="rsvp-box" id="previewOptions"></div>
+          </div>
+        </article>
+
+        <p class="status-line" id="statusLine" role="status" aria-live="polite"></p>
+      </aside>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>
