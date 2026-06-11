@@ -816,24 +816,48 @@ function getGroceryTermsForNeed(text) {
 
 function groceryAliasRules() {
   return [
-    { pattern: /burger|hamburger|grilled main/, terms: ["ground beef", "cheddar cheese", "romaine lettuce"] },
-    { pattern: /veggie|vegetable|skewer/, terms: ["romaine lettuce", "avocados", "cilantro"] },
-    { pattern: /chip|dip/, terms: ["salsa"] },
+    { pattern: /burger|hamburger|grilled main/, terms: ["ground beef", "burger buns", "cheddar cheese", "romaine lettuce", "tomatoes", "red onions", "pickles", "ketchup", "mustard"] },
+    { pattern: /hot dog|frankfurter/, terms: ["hot dogs", "hot dog buns", "ketchup", "mustard", "pickles"] },
+    { pattern: /wing/, terms: ["chicken wings", "bbq sauce", "ranch dressing", "hot sauce"] },
+    { pattern: /ribs?/, terms: ["pork ribs", "bbq sauce", "aluminum foil"] },
+    { pattern: /brat|sausage/, terms: ["bratwurst", "italian sausage", "hot dog buns", "mustard", "red onions"] },
+    { pattern: /veggie|vegetable|skewer/, terms: ["bell peppers", "zucchini", "mushrooms", "cherry tomatoes", "red onions"] },
+    { pattern: /corn/, terms: ["corn on the cob", "butter", "kosher salt"] },
+    { pattern: /chip|dip/, terms: ["tortilla chips", "potato chips", "salsa", "guacamole", "queso dip"] },
+    { pattern: /hummus|mezze/, terms: ["hummus", "pita bread", "baby carrots", "cucumbers"] },
     { pattern: /sparkling water|seltzer/, terms: ["sparkling water"] },
-    { pattern: /pizza/, terms: ["frozen pizza", "cheddar cheese"] },
-    { pattern: /taco|wrap|quesadilla/, terms: ["tortillas", "ground beef", "cheddar cheese", "salsa", "cilantro", "avocados"] },
-    { pattern: /sandwich|slider/, terms: ["sourdough bread", "cheddar cheese", "romaine lettuce"] },
-    { pattern: /salad|lettuce/, terms: ["romaine lettuce", "avocados"] },
-    { pattern: /fruit/, terms: ["bananas", "avocados"] },
+    { pattern: /lemonade/, terms: ["lemonade"] },
+    { pattern: /iced tea|ice tea/, terms: ["iced tea"] },
+    { pattern: /soda|soft drink|cola/, terms: ["soda"] },
+    { pattern: /water bottles?|bottled water/, terms: ["bottled water"] },
+    { pattern: /juice box|kid drink/, terms: ["juice boxes"] },
+    { pattern: /beer/, terms: ["beer"] },
+    { pattern: /wine/, terms: ["wine"] },
+    { pattern: /pizza/, terms: ["frozen pizza", "pizza dough", "mozzarella cheese", "pepperoni", "marinara sauce"] },
+    { pattern: /taco|quesadilla/, terms: ["tortillas", "ground beef", "cheddar cheese", "salsa", "cilantro", "avocados"] },
+    { pattern: /wrap/, terms: ["tortillas", "chicken breast", "romaine lettuce", "tomatoes"] },
+    { pattern: /sandwich|slider/, terms: ["sourdough bread", "cheddar cheese", "romaine lettuce", "tomatoes", "mayonnaise", "mustard"] },
+    { pattern: /salad|lettuce/, terms: ["romaine lettuce", "cherry tomatoes", "cucumbers", "avocados", "ranch dressing"] },
+    { pattern: /fruit/, terms: ["fruit tray", "watermelon", "strawberries", "grapes"] },
+    { pattern: /potato salad/, terms: ["potato salad"] },
+    { pattern: /coleslaw|slaw/, terms: ["coleslaw mix", "mayonnaise"] },
+    { pattern: /chicken drumstick|drumstick/, terms: ["chicken drumsticks", "bbq sauce"] },
     { pattern: /chicken/, terms: ["chicken breast"] },
     { pattern: /salmon|fish|seafood/, terms: ["salmon fillet"] },
-    { pattern: /tofu|plant based|vegetarian protein/, terms: ["tofu"] },
+    { pattern: /tofu|plant based|vegetarian protein/, terms: ["tofu", "veggie burgers", "plant-based hot dogs", "vegan cheese"] },
+    { pattern: /vegan|vegetarian/, terms: ["veggie burgers", "black bean burgers", "plant-based hot dogs", "vegan cheese", "tofu"] },
+    { pattern: /gluten free|gluten-free/, terms: ["gluten-free buns", "gluten-free bread"] },
+    { pattern: /falafel/, terms: ["falafel", "pita bread", "hummus", "cucumbers"] },
+    { pattern: /naan|indian/, terms: ["naan", "basmati rice"] },
     { pattern: /rice/, terms: ["white rice"] },
-    { pattern: /pasta/, terms: ["pasta", "olive oil", "tomato paste"] },
-    { pattern: /bean/, terms: ["canned black beans"] },
+    { pattern: /pasta/, terms: ["pasta", "olive oil", "tomato paste", "marinara sauce", "mozzarella cheese"] },
+    { pattern: /bean/, terms: ["canned black beans", "black bean burgers"] },
     { pattern: /coffee/, terms: ["coffee beans"] },
     { pattern: /milk/, terms: ["milk"] },
     { pattern: /dessert|cake|cupcake|cookie|brownie/, terms: ["ice cream", "baking powder", "butter", "eggs", "milk"] },
+    { pattern: /plates?|cups?|napkins?|supplies|place settings?/, terms: ["paper plates", "plastic cups", "napkins", "paper towels"] },
+    { pattern: /grill|charcoal|propane/, terms: ["charcoal", "propane tank", "aluminum foil"] },
+    { pattern: /ice/, terms: ["ice"] },
     { pattern: /salsa/, terms: ["salsa"] }
   ];
 }
@@ -854,21 +878,43 @@ function estimateGroceryQuantity(record, term, need, headcount) {
   const item = normalizeForSearch(record ? record.normalized_item : term);
 
   if (item.includes("ground beef")) return `~${Math.max(1, Math.ceil(headcount / 4))} lb`;
-  if (item.includes("chicken") || item.includes("salmon")) return `~${Math.max(1, Math.ceil(headcount / 3))} lb`;
-  if (item.includes("cheddar")) return `${Math.max(1, Math.ceil(headcount / 10))} packs`;
+  if (item.includes("hot dogs") || item.includes("plant based hot dogs")) return `${Math.ceil(headcount * 1.2)} hot dogs`;
+  if (item.includes("chicken wings")) return `~${Math.max(2, Math.ceil(headcount / 2))} lb`;
+  if (item.includes("chicken") || item.includes("salmon") || item.includes("ribs") || item.includes("sausage") || item.includes("bratwurst")) return `~${Math.max(1, Math.ceil(headcount / 3))} lb`;
+  if (item.includes("veggie burgers") || item.includes("black bean burgers") || item.includes("turkey burgers")) return `${Math.max(1, Math.ceil(headcount / 4))} packs`;
+  if (item.includes("cheddar") || item.includes("mozzarella") || item.includes("vegan cheese")) return `${Math.max(1, Math.ceil(headcount / 10))} packs`;
   if (item.includes("romaine")) return `${Math.max(1, Math.ceil(headcount / 8))} heads or packs`;
   if (item.includes("avocado")) return `${Math.max(2, Math.ceil(headcount / 4))} avocados`;
   if (item.includes("cilantro")) return `${Math.max(1, Math.ceil(headcount / 12))} bunches`;
+  if (item.includes("bell peppers") || item.includes("zucchini") || item.includes("mushrooms") || item.includes("tomatoes") || item.includes("cucumbers")) return `${Math.max(2, Math.ceil(headcount / 5))} packs or units`;
+  if (item.includes("corn on the cob")) return `${Math.ceil(headcount * 1.1)} ears`;
+  if (item.includes("potatoes")) return `~${Math.max(2, Math.ceil(headcount / 3))} lb`;
+  if (item.includes("watermelon")) return `${Math.max(1, Math.ceil(headcount / 16))} whole watermelons`;
+  if (item.includes("strawberries") || item.includes("grapes")) return `${Math.max(1, Math.ceil(headcount / 8))} containers`;
+  if (item.includes("fruit tray") || item.includes("veggie tray")) return `${Math.max(1, Math.ceil(headcount / 12))} trays`;
+  if (item.includes("burger buns") || item.includes("hot dog buns")) return `${Math.max(1, Math.ceil(headcount / 8))} packs`;
   if (item.includes("tortilla")) return `${Math.max(1, Math.ceil(headcount / 10))} packs`;
-  if (item.includes("salsa")) return `${Math.max(1, Math.ceil(headcount / 10))} jars`;
-  if (item.includes("sparkling water")) return `${Math.max(1, Math.ceil(headcount / 8))} packs`;
+  if (item.includes("pita") || item.includes("naan") || item.includes("bread")) return `${Math.max(1, Math.ceil(headcount / 10))} packs or loaves`;
+  if (item.includes("salsa") || item.includes("bbq sauce") || item.includes("ketchup") || item.includes("mustard") || item.includes("mayonnaise") || item.includes("ranch") || item.includes("hot sauce") || item.includes("guacamole") || item.includes("queso")) return `${Math.max(1, Math.ceil(headcount / 10))} jars or bottles`;
+  if (item.includes("hummus")) return `${Math.max(1, Math.ceil(headcount / 8))} tubs`;
+  if (item.includes("chips") || item.includes("pretzels") || item.includes("popcorn")) return `${Math.max(1, Math.ceil(headcount / 8))} bags`;
+  if (item.includes("sparkling water") || item.includes("soda") || item.includes("bottled water") || item.includes("juice boxes")) return `${Math.max(1, Math.ceil(headcount / 8))} packs`;
+  if (item.includes("lemonade") || item.includes("iced tea")) return `${Math.max(1, Math.ceil(headcount / 10))} jugs`;
+  if (item.includes("beer") || item.includes("wine")) return `${Math.max(1, Math.ceil(headcount / 8))} packs or bottles`;
+  if (item.includes("ice")) return `${Math.max(1, Math.ceil(headcount / 12))} bags`;
   if (item.includes("milk")) return `${Math.max(1, Math.ceil(headcount / 12))} cartons`;
   if (item.includes("egg")) return `${Math.max(1, Math.ceil(headcount / 12))} dozen`;
-  if (item.includes("bread")) return `${Math.max(1, Math.ceil(headcount / 10))} loaves`;
   if (item.includes("frozen pizza")) return `${Math.max(1, Math.ceil(headcount / 3))} pizzas`;
+  if (item.includes("pizza dough")) return `${Math.max(1, Math.ceil(headcount / 4))} dough balls`;
+  if (item.includes("pepperoni")) return `${Math.max(1, Math.ceil(headcount / 10))} packs`;
+  if (item.includes("marinara")) return `${Math.max(1, Math.ceil(headcount / 10))} jars`;
   if (item.includes("ice cream")) return `${Math.max(1, Math.ceil(headcount / 8))} tubs`;
   if (item.includes("rice") || item.includes("pasta")) return `${Math.max(1, Math.ceil(headcount / 10))} bags or boxes`;
   if (item.includes("beans")) return `${Math.max(1, Math.ceil(headcount / 4))} cans`;
+  if (item.includes("paper plates") || item.includes("plastic cups") || item.includes("napkins")) return `${Math.max(1, Math.ceil(headcount / 25))} packs`;
+  if (item.includes("paper towels") || item.includes("aluminum foil")) return `${Math.max(1, Math.ceil(headcount / 30))} rolls`;
+  if (item.includes("charcoal")) return `${Math.max(1, Math.ceil(headcount / 20))} bags`;
+  if (item.includes("propane")) return "1 tank or exchange";
 
   return `for ${need.quantity}`;
 }
