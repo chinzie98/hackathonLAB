@@ -234,6 +234,37 @@
             <p class="suggestion-note" id="groceryRecommendationStatus"></p>
             <div class="grocery-list" id="groceryRecommendationList" data-testid="grocery-recommendation-list"></div>
           </section>
+
+          <section class="form-section" aria-labelledby="integrationsHeading" data-testid="event-integrations">
+            <div class="inline-heading">
+              <h3 id="integrationsHeading">Connected Services</h3>
+              <span id="integrationCount">0</span>
+            </div>
+            <div class="integration-grid">
+              <article class="integration-card">
+                <div>
+                  <span class="integration-kicker">Music</span>
+                  <strong>Spotify playlist</strong>
+                  <p>Draft a shared playlist for the event mood and guest requests.</p>
+                </div>
+                <div class="integration-actions">
+                  <span class="integration-status" id="spotifyStatus">Not set up</span>
+                  <button class="secondary-btn" id="setupSpotifyBtn" type="button">Set up playlist</button>
+                </div>
+              </article>
+              <article class="integration-card">
+                <div>
+                  <span class="integration-kicker">Groceries</span>
+                  <strong>Instacart cart</strong>
+                  <p>Send matched grocery recommendations into a shopping cart.</p>
+                </div>
+                <div class="integration-actions">
+                  <span class="integration-status" id="instacartStatus">Not connected</span>
+                  <button class="secondary-btn" id="connectInstacartBtn" type="button">Connect Instacart</button>
+                </div>
+              </article>
+            </div>
+          </section>
         </form>
       </section>
 

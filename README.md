@@ -18,7 +18,7 @@ Running from a server lets the browser fetch `grocery_item_store_matching_seed.c
 
 ## What It Does
 
-Gatherly helps the default organizer turn a loose event idea into an actionable plan. It tracks guests, budget, expenses, food and drink preferences, generated party tasks, task assignments, grocery recommendations, invite text, and calendar export.
+Gatherly helps the default organizer turn a loose event idea into an actionable plan. It tracks guests, budget, expenses, food and drink preferences, generated party tasks, task assignments, grocery recommendations, Spotify/Instacart integration placeholders, invite text, and calendar export.
 
 The seeded demo starts with a 24-person backyard BBQ, assigned tasks for Alex and Jamie, budget tracking, grocery matching, and an invite preview.
 
@@ -47,12 +47,14 @@ Production-ready:
 - CSV-backed grocery matching with fallback behavior.
 - Calendar export and invite copy.
 - Responsive static deployment path.
+- Demo placeholders for Spotify playlist setup and Instacart cart connection.
 
 Hackathon-grade:
 - No multi-user accounts or shared event links yet.
 - Grocery prices are not live; the CSV identifies likely store matches and live inventory sources.
 - Quantities are heuristic estimates, not recipe- or nutrition-grade calculations.
 - Local storage should be replaced with a database for real hosted events.
+- Spotify and Instacart are staged as UI placeholders; production would require OAuth, API credentials, and provider review.
 
 ## Target Market
 

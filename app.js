@@ -162,6 +162,11 @@ const elements = {
   groceryRecommendationCount: document.querySelector("#groceryRecommendationCount"),
   groceryRecommendationStatus: document.querySelector("#groceryRecommendationStatus"),
   groceryRecommendationList: document.querySelector("#groceryRecommendationList"),
+  integrationCount: document.querySelector("#integrationCount"),
+  spotifyStatus: document.querySelector("#spotifyStatus"),
+  instacartStatus: document.querySelector("#instacartStatus"),
+  setupSpotifyBtn: document.querySelector("#setupSpotifyBtn"),
+  connectInstacartBtn: document.querySelector("#connectInstacartBtn"),
   budgetRemainingBadge: document.querySelector("#budgetRemainingBadge"),
   budgetSummary: document.querySelector("#budgetSummary"),
   budgetTotal: document.querySelector("#budgetTotal"),
@@ -247,6 +252,10 @@ function bindEvents() {
       budget: "",
       expenses: [],
       assignments: {},
+      integrations: {
+        spotify: false,
+        instacart: false
+      },
       guests: [],
       preferences: {
         food: [],
@@ -274,6 +283,8 @@ function bindEvents() {
   elements.addFoodPreferenceBtn.addEventListener("click", () => addPreference("food"));
   elements.addDrinkPreferenceBtn.addEventListener("click", () => addPreference("drinks"));
   elements.addExpenseBtn.addEventListener("click", addExpense);
+  elements.setupSpotifyBtn.addEventListener("click", () => activateIntegration("spotify"));
+  elements.connectInstacartBtn.addEventListener("click", () => activateIntegration("instacart"));
   elements.deleteEventBtn.addEventListener("click", deleteActiveEvent);
   elements.downloadCalendarBtn.addEventListener("click", downloadCalendar);
 
@@ -389,7 +400,11 @@ function hydrateEvent(event) {
     guests: Array.isArray(event.guests) ? event.guests : [],
     preferences: hydratePreferences(event),
     expenses: Array.isArray(event.expenses) ? event.expenses : [],
-    assignments: hydrateAssignments(event.assignments)
+    assignments: hydrateAssignments(event.assignments),
+    integrations: {
+      ...fallback.integrations,
+      ...(event.integrations || {})
+    }
   };
 }
 
@@ -458,6 +473,10 @@ function createEvent(overrides = {}) {
       main: "Alex",
       drink: "Jamie"
     },
+    integrations: {
+      spotify: false,
+      instacart: false
+    },
     expenses: [
       { id: makeId(), name: "Grill food", amount: 95 },
       { id: makeId(), name: "Drinks", amount: 42 },
@@ -477,6 +496,7 @@ function renderAll() {
   renderPreferences(event);
   renderSuggestions(event);
   renderGroceryRecommendations(event);
+  renderIntegrations(event);
   renderBudget(event);
   renderPreview(event);
 }
@@ -721,6 +741,21 @@ function createGroceryRecommendationItem(recommendation) {
   store.append(storeLabel, storeChains, inventory);
   item.append(content, store);
   return item;
+}
+
+function renderIntegrations(event) {
+  const connected = [
+    event.integrations.spotify,
+    event.integrations.instacart
+  ].filter(Boolean).length;
+
+  elements.integrationCount.textContent = String(connected);
+  elements.spotifyStatus.textContent = event.integrations.spotify ? "Playlist draft ready" : "Not set up";
+  elements.instacartStatus.textContent = event.integrations.instacart ? "Cart connection staged" : "Not connected";
+  elements.spotifyStatus.classList.toggle("connected", event.integrations.spotify);
+  elements.instacartStatus.classList.toggle("connected", event.integrations.instacart);
+  elements.setupSpotifyBtn.textContent = event.integrations.spotify ? "Playlist ready" : "Set up playlist";
+  elements.connectInstacartBtn.textContent = event.integrations.instacart ? "Instacart staged" : "Connect Instacart";
 }
 
 function generateGroceryRecommendations(event) {
@@ -1110,6 +1145,8 @@ function getOptionLabels(event) {
   if (event.settings.plusOnes) labels.push("Plus ones welcome");
   if (event.settings.kids) labels.push("Kids welcome");
   if (event.settings.potluck) labels.push("Party list included");
+  if (event.integrations.spotify) labels.push("Spotify playlist ready");
+  if (event.integrations.instacart) labels.push("Instacart cart staged");
   return labels.length ? labels : ["Details only"];
 }
 
@@ -1151,6 +1188,15 @@ function addExpense() {
   elements.expenseNameInput.value = "";
   elements.expenseAmountInput.value = "";
   persistAndRender();
+}
+
+function activateIntegration(type) {
+  const event = getActiveEvent();
+  event.integrations[type] = true;
+  persistAndRender();
+  setStatus(type === "spotify"
+    ? "Spotify playlist placeholder is ready."
+    : "Instacart connection placeholder is staged.");
 }
 
 function handlePreferenceEnter(event, type) {

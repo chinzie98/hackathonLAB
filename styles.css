@@ -564,6 +564,67 @@ textarea:focus {
   font-size: 0.92rem;
 }
 
+.integration-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.integration-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+  padding: 14px;
+  background: #f8faf9;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.integration-card div {
+  min-width: 0;
+}
+
+.integration-kicker {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--green);
+  font-size: 0.72rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.integration-card strong,
+.integration-card p {
+  overflow-wrap: anywhere;
+}
+
+.integration-card p {
+  margin: 6px 0 0;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.integration-actions {
+  display: grid;
+  gap: 8px;
+  justify-items: end;
+}
+
+.integration-status {
+  width: fit-content;
+  padding: 7px 10px;
+  color: var(--muted);
+  background: #edf1f2;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 900;
+}
+
+.integration-status.connected {
+  color: #245245;
+  background: #e0eee9;
+}
+
 .suggestion-actions {
   justify-items: end;
 }
@@ -965,6 +1026,14 @@ textarea:focus {
 
   .grocery-item {
     grid-template-columns: 1fr;
+  }
+
+  .integration-card {
+    grid-template-columns: 1fr;
+  }
+
+  .integration-actions {
+    justify-items: start;
   }
 
   .suggestion-actions {
